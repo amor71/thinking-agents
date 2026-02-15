@@ -1,0 +1,404 @@
+#!/usr/bin/env python3
+"""
+🧠 Thinking Agents — Multi-Model Orchestrator
+Runs 4 thinking threads in parallel on different models,
+then aggregates results into subconscious.json.
+
+Thread → Model mapping:
+  Watcher   → Groq (Llama 3.3 70B) — fast, observational
+  Librarian → Gemini 2.0 Flash — pattern recognition
+  Oracle    → GLM-5 — deep reasoning, different worldview
+  Dreamer   → GPT-4o-mini — creative, cost-effective
+"""
+
+import json
+import os
+import sys
+import time
+import subprocess
+import urllib.request
+import urllib.error
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
+
+# ─── Paths ────────────────────────────────────────────────────
+BASE = Path(__file__).parent
+PROMPTS = BASE / "prompts"
+SUBCONSCIOUS = BASE / "subconscious.json"
+
+# ─── API Keys ─────────────────────────────────────────────────
+def load_env(path):
+    """Load KEY=VALUE from env file."""
+    env = {}
+    p = Path(path).expanduser()
+    if p.exists():
+        for line in p.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip()
+    return env
+
+GROQ_KEY = load_env("~/.config/groq/credentials.env").get("GROQ_API_KEY", "")
+GEMINI_KEY = load_env("~/.config/google/gemini.env").get("GEMINI_API_KEY", "")
+GLM_KEY = load_env("~/.config/zhipu/credentials.env").get("ZHIPU_API_KEY", "")
+OPENAI_KEY = load_env("~/.config/openai/credentials.env").get("OPENAI_API_KEY", "")
+
+# ─── Model Config ─────────────────────────────────────────────
+THREADS = {
+    "watcher": {
+        "provider": "groq",
+        "model": "llama-3.3-70b-versatile",
+        "prompt_file": PROMPTS / "watcher.md",
+    },
+    "librarian": {
+        "provider": "gemini",
+        "model": "gemini-2.0-flash",
+        "prompt_file": PROMPTS / "librarian.md",
+    },
+    "oracle": {
+        "provider": "glm",
+        "model": "glm-5",
+        "prompt_file": PROMPTS / "oracle.md",
+    },
+    "dreamer": {
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "prompt_file": PROMPTS / "dreamer.md",
+    },
+}
+
+# ─── Gather Context ───────────────────────────────────────────
+def get_system_health():
+    """Quick system health check."""
+    try:
+        disk = subprocess.check_output(["df", "-h", "/"], timeout=5).decode().strip().split("\n")[-1]
+        mem = subprocess.check_output(["free", "-h"], timeout=5).decode().strip().split("\n")[1]
+        uptime = subprocess.check_output(["uptime", "-p"], timeout=5).decode().strip()
+        return f"Disk: {disk}\nMemory: {mem}\nUptime: {uptime}"
+    except Exception as e:
+        return f"Health check failed: {e}"
+
+def get_recent_memory():
+    """Read today's and yesterday's memory files."""
+    mem_dir = Path.home() / ".openclaw/workspace/memory"
+    now = datetime.now(timezone(timedelta(hours=-5)))
+    today = now.strftime("%Y-%m-%d")
+    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    result = ""
+    for day in [yesterday, today]:
+        f = mem_dir / f"{day}.md"
+        if f.exists():
+            content = f.read_text()[:2000]  # Cap at 2000 chars
+            result += f"\n--- {day} ---\n{content}\n"
+    return result or "(no recent memory files)"
+
+def load_subconscious():
+    """Load current subconscious state."""
+    if SUBCONSCIOUS.exists():
+        try:
+            return json.loads(SUBCONSCIOUS.read_text())
+        except json.JSONDecodeError:
+            return {"version": 1, "tick_count": 0, "active_threads": [], "patterns": [], "hunches": []}
+    return {"version": 1, "tick_count": 0, "active_threads": [], "patterns": [], "hunches": []}
+
+def build_prompt(thread_name, prompt_template, subconscious, context):
+    """Build the full prompt for a thread."""
+    sub_json = json.dumps(subconscious, indent=2)
+    
+    # Get thread state
+    thread_state = subconscious.get("thread_state", {}).get(thread_name, {})
+    history = json.dumps(thread_state.get("last_findings", []), indent=2)
+    focus = thread_state.get("focus_hint", "None")
+    novelty = thread_state.get("novelty_pressure", 0)
+    
+    prompt = prompt_template
+    prompt = prompt.replace("{{SUBCONSCIOUS}}", sub_json)
+    prompt = prompt.replace("{{THREAD_HISTORY}}", history)
+    prompt = prompt.replace("{{FOCUS_HINT}}", str(focus))
+    prompt = prompt.replace("{{NOVELTY_PRESSURE}}", str(novelty))
+    
+    # Add live context
+    prompt += f"\n\n## Live Context\n```\n{context}\n```"
+    
+    return prompt
+
+# ─── API Calls ────────────────────────────────────────────────
+def call_openai_compatible(url, key, model, prompt, max_tokens=500, timeout=30):
+    """Call OpenAI-compatible API (OpenAI, Groq)."""
+    data = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a cognitive thread in a thinking agent's mind. Respond with ONLY valid JSON as specified in your instructions."},
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+    }).encode()
+    
+    req = urllib.request.Request(url, data=data, headers={
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "User-Agent": "thinking-agents/1.0",
+    })
+    
+    try:
+        resp = urllib.request.urlopen(req, timeout=timeout)
+        result = json.loads(resp.read())
+        return result["choices"][0]["message"]["content"]
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()[:500]
+        raise Exception(f"HTTP {e.code}: {body}")
+
+def call_gemini(key, model, prompt, max_tokens=500, timeout=30):
+    """Call Gemini API."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+    data = json.dumps({
+        "contents": [{"parts": [{"text": f"You are a cognitive thread in a thinking agent's mind. Respond with ONLY valid JSON as specified in your instructions.\n\n{prompt}"}]}],
+        "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.7}
+    }).encode()
+    
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json", "User-Agent": "thinking-agents/1.0"})
+    resp = urllib.request.urlopen(req, timeout=timeout)
+    result = json.loads(resp.read())
+    return result["candidates"][0]["content"]["parts"][0]["text"]
+
+def call_glm(key, model, prompt, max_tokens=1000, timeout=60):
+    """Call Z.AI GLM API (reasoning model, needs more tokens)."""
+    url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    data = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a cognitive thread in a thinking agent's mind. Respond with ONLY valid JSON as specified in your instructions."},
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+    }).encode()
+    
+    req = urllib.request.Request(url, data=data, headers={
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "User-Agent": "thinking-agents/1.0",
+    })
+    
+    resp = urllib.request.urlopen(req, timeout=timeout)
+    result = json.loads(resp.read())
+    return result["choices"][0]["message"]["content"]
+
+def run_thread(thread_name, config, prompt):
+    """Run a single thinking thread on its assigned model."""
+    provider = config["provider"]
+    model = config["model"]
+    
+    try:
+        if provider == "groq":
+            raw = call_openai_compatible(
+                "https://api.groq.com/openai/v1/chat/completions",
+                GROQ_KEY, model, prompt
+            )
+        elif provider == "openai":
+            raw = call_openai_compatible(
+                "https://api.openai.com/v1/chat/completions",
+                OPENAI_KEY, model, prompt
+            )
+        elif provider == "gemini":
+            raw = call_gemini(GEMINI_KEY, model, prompt)
+        elif provider == "glm":
+            raw = call_glm(GLM_KEY, model, prompt)
+        else:
+            return {"error": f"Unknown provider: {provider}"}
+        
+        # Try to parse JSON from response (may have markdown fences)
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+            if raw.endswith("```"):
+                raw = raw[:-3]
+            raw = raw.strip()
+        
+        return json.loads(raw)
+    
+    except json.JSONDecodeError:
+        return {"findings": [], "escalate": False, "raw_response": raw[:500]}
+    except Exception as e:
+        return {"error": str(e), "findings": [], "escalate": False}
+
+# ─── Aggregator ───────────────────────────────────────────────
+def aggregate(subconscious, thread_results):
+    """Merge thread results into subconscious state."""
+    now = datetime.now(timezone(timedelta(hours=-5))).isoformat()
+    
+    # Init thread_state if missing
+    if "thread_state" not in subconscious:
+        subconscious["thread_state"] = {}
+    
+    # Decay existing entries
+    for category in ["active_threads", "patterns", "hunches", "insights"]:
+        entries = subconscious.get(category, [])
+        subconscious[category] = [e for e in entries if e.get("strength", 1) > 1]
+        for e in subconscious[category]:
+            e["strength"] = max(0, e.get("strength", 1) - 1)
+    
+    escalations = []
+    all_focus_hints = {}
+    
+    for thread_name, result in thread_results.items():
+        findings = result.get("findings", [])
+        
+        # Update thread state
+        subconscious["thread_state"][thread_name] = {
+            "last_findings": [f.get("summary", "")[:80] for f in findings[:3]],
+            "novelty_pressure": min(10, subconscious.get("thread_state", {}).get(thread_name, {}).get("novelty_pressure", 0) + 1) if not findings else 0,
+            "last_tick": now,
+            "model": THREADS[thread_name]["model"],
+            "provider": THREADS[thread_name]["provider"],
+        }
+        
+        # Collect focus hints
+        if result.get("suggested_focus"):
+            all_focus_hints[thread_name] = result["suggested_focus"]
+        
+        # Check escalation
+        if result.get("escalate"):
+            escalations.append({
+                "thread": thread_name,
+                "reason": result.get("escalate_reason", "Unknown"),
+                "timestamp": now,
+            })
+        
+        # Process findings
+        for finding in findings:
+            importance = finding.get("importance", 0)
+            if importance < 3:
+                continue
+            
+            # Check for reinforcement
+            reinforce_ids = finding.get("reinforce", []) + finding.get("related_threads", [])
+            reinforced = False
+            for category in ["active_threads", "patterns", "hunches", "insights"]:
+                for entry in subconscious.get(category, []):
+                    if entry.get("id") in reinforce_ids or (
+                        finding.get("summary", "").lower()[:30] in entry.get("summary", "").lower()
+                    ):
+                        entry["strength"] = min(10, entry.get("strength", 1) + 2)
+                        entry["last_seen"] = now
+                        reinforced = True
+            
+            if not reinforced:
+                # Add new entry
+                new_entry = {
+                    "id": f"{thread_name[:2]}-{finding.get('type', 'obs')[:8]}-{int(time.time()) % 10000}",
+                    "summary": finding.get("summary", "")[:100],
+                    "strength": 3,
+                    "added": now,
+                    "last_seen": now,
+                    "source": thread_name,
+                }
+                
+                ftype = finding.get("type", "observation")
+                if ftype in ("idea", "connection", "question", "challenge", "delight"):
+                    if importance >= 6:
+                        subconscious.setdefault("insights", []).append(new_entry)
+                    else:
+                        subconscious.setdefault("hunches", []).append(new_entry)
+                elif ftype in ("pattern", "connection"):
+                    subconscious.setdefault("patterns", []).append(new_entry)
+                else:
+                    subconscious.setdefault("active_threads", []).append(new_entry)
+    
+    # Distribute focus hints (each thread gets hints from others)
+    for thread_name in THREADS:
+        hints = [f"{k}: {v}" for k, v in all_focus_hints.items() if k != thread_name]
+        if hints:
+            subconscious["thread_state"].setdefault(thread_name, {})["focus_hint"] = "; ".join(hints[:3])
+    
+    # Prune
+    limits = {"active_threads": 5, "patterns": 5, "hunches": 5, "insights": 3}
+    for category, limit in limits.items():
+        entries = subconscious.get(category, [])
+        if len(entries) > limit:
+            entries.sort(key=lambda e: e.get("strength", 0), reverse=True)
+            subconscious[category] = entries[:limit]
+    
+    # Update metadata
+    subconscious["last_tick"] = now
+    subconscious["tick_count"] = subconscious.get("tick_count", 0) + 1
+    
+    # Handle escalations
+    if escalations:
+        subconscious.setdefault("escalation_history", []).extend(escalations)
+        subconscious["escalation_history"] = subconscious["escalation_history"][-10:]
+    
+    return subconscious, escalations
+
+# ─── Main ─────────────────────────────────────────────────────
+def main():
+    start = time.time()
+    
+    # Load state
+    subconscious = load_subconscious()
+    
+    # Gather context
+    health = get_system_health()
+    memory = get_recent_memory()
+    context = f"System Health:\n{health}\n\nRecent Memory:\n{memory}"
+    
+    # Build prompts
+    prompts = {}
+    for name, config in THREADS.items():
+        template = config["prompt_file"].read_text()
+        prompts[name] = build_prompt(name, template, subconscious, context)
+    
+    # Run all 4 threads in parallel
+    results = {}
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            executor.submit(run_thread, name, config, prompts[name]): name
+            for name, config in THREADS.items()
+        }
+        for future in as_completed(futures, timeout=90):
+            name = futures[future]
+            try:
+                results[name] = future.result()
+            except Exception as e:
+                results[name] = {"error": str(e), "findings": [], "escalate": False}
+    
+    # Aggregate
+    updated, escalations = aggregate(subconscious, results)
+    
+    # Write
+    SUBCONSCIOUS.write_text(json.dumps(updated, indent=2))
+    
+    elapsed = time.time() - start
+    
+    # Report
+    report = {
+        "tick": updated["tick_count"],
+        "elapsed_seconds": round(elapsed, 1),
+        "threads": {},
+        "escalations": len(escalations),
+    }
+    for name in THREADS:
+        r = results.get(name, {})
+        report["threads"][name] = {
+            "model": THREADS[name]["model"],
+            "provider": THREADS[name]["provider"],
+            "findings": len(r.get("findings", [])),
+            "error": r.get("error"),
+            "escalate": r.get("escalate", False),
+        }
+    
+    print(json.dumps(report, indent=2))
+    
+    # If escalation, exit with code 1 so cron can detect
+    if escalations:
+        print(f"\n🚨 ESCALATION from: {', '.join(e['thread'] for e in escalations)}")
+        for e in escalations:
+            print(f"  → {e['reason']}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
