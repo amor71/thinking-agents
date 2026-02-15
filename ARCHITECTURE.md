@@ -10,41 +10,32 @@ This implements the two-tier cognitive architecture described in the [Manifesto]
 
 ## Components
 
-```
-┌─────────────────────────────────────────────────────┐
-│                   CRON TRIGGER                       │
-│                  (every 5 min)                       │
-└──────────────────────┬──────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────┐
-│              ORCHESTRATOR SCRIPT                      │
-│         (reads subconscious.json, spawns 4           │
-│          parallel threads, waits, runs aggregator)   │
-└──┬───────┬───────┬───────┬───────────────────────────┘
-   │       │       │       │
-   ▼       ▼       ▼       ▼
-┌──────┐┌──────┐┌──────┐┌──────┐
-│Watch-││Libra-││Oracle││Dream-│  ← 4 parallel threads
-│ er   ││rian  ││      ││ er   │    (4 different models)
-│Groq/ ││Gemini││GLM-5 ││GPT-  │
-│Llama ││Flash ││(Z.AI)││4o-   │
-│3.3   ││      ││      ││mini  │
-└──┬───┘└──┬───┘└──┬───┘└──┬───┘
-   │       │       │       │
-   ▼       ▼       ▼       ▼
-┌──────────────────────────────────────────────────────┐
-│                  AGGREGATOR                           │
-│    (merges findings → subconscious.json,             │
-│     handles decay/reinforce/prune,                   │
-│     escalates if needed)                             │
-└──────────────────────┬───────────────────────────────┘
-                       │ (if ESCALATE)
-                       ▼
-┌──────────────────────────────────────────────────────┐
-│              PRIMARY MODEL (Opus)                     │
-│    (deliberate reasoning on escalated context)       │
-└──────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    CRON["⏰ Cron Trigger<br/><i>every 5 min</i>"] --> ORCH["🧠 Orchestrator<br/><i>reads subconscious, spawns threads</i>"]
+    
+    ORCH --> W["🔭 Watcher<br/><i>Groq / Llama 3.3 70B</i>"]
+    ORCH --> L["📚 Librarian<br/><i>Gemini 2.0 Flash</i>"]
+    ORCH --> O["🔮 Oracle<br/><i>GLM-5 (Z.AI)</i>"]
+    ORCH --> D["💭 Dreamer<br/><i>GPT-4o-mini</i>"]
+
+    W --> AGG["⚙️ Aggregator<br/><i>decay / reinforce / prune</i>"]
+    L --> AGG
+    O --> AGG
+    D --> AGG
+
+    AGG --> SUB["🧬 subconscious.json"]
+    AGG -->|"🚨 ESCALATE"| PRIMARY["🥃 Primary Model (Opus)<br/><i>deliberate reasoning</i>"]
+
+    style CRON fill:#2d3436,stroke:#dfe6e9,color:#dfe6e9
+    style ORCH fill:#6c5ce7,stroke:#a29bfe,color:#fff
+    style W fill:#00b894,stroke:#55efc4,color:#fff
+    style L fill:#0984e3,stroke:#74b9ff,color:#fff
+    style O fill:#e17055,stroke:#fab1a0,color:#fff
+    style D fill:#fdcb6e,stroke:#ffeaa7,color:#2d3436
+    style AGG fill:#636e72,stroke:#b2bec3,color:#fff
+    style SUB fill:#2d3436,stroke:#dfe6e9,color:#dfe6e9
+    style PRIMARY fill:#d63031,stroke:#ff7675,color:#fff
 ```
 
 ## The Subconscious (shared memory)

@@ -10,33 +10,27 @@ Built for [OpenClaw](https://github.com/openclaw/openclaw). See the original RFC
 
 ## How It Works
 
-```
-                    ┌──────────────┐
-                    │  CRON (5min) │
-                    └──────┬───────┘
-                           │
-                    ┌──────▼───────┐
-                    │ orchestrator │
-                    │    .py       │
-                    └──┬──┬──┬──┬──┘
-                       │  │  │  │
-          ┌────────────┘  │  │  └────────────┐
-          │       ┌───────┘  └───────┐       │
-          ▼       ▼                  ▼       ▼
-     ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-     │ Watcher │ │Librarian│ │  Oracle │ │ Dreamer │
-     │  Groq/  │ │ Gemini  │ │  GLM-5  │ │GPT-4o-  │
-     │ Llama   │ │  Flash  │ │ (Z.AI)  │ │  mini   │
-     └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘
-          │           │           │           │
-          └─────┬─────┴─────┬─────┴─────┬─────┘
-                │           │           │
-                ▼           ▼           ▼
-          ┌──────────────────────────────────┐
-          │      subconscious.json           │
-          │  (shared memory with decay/      │
-          │   reinforcement + escalation)    │
-          └──────────────────────────────────┘
+```mermaid
+graph TD
+    CRON["⏰ CRON (every 5 min)"] --> ORCH["🧠 orchestrator.py"]
+    ORCH --> W["🔭 Watcher<br/><i>Groq / Llama 3.3 70B</i>"]
+    ORCH --> L["📚 Librarian<br/><i>Gemini 2.0 Flash</i>"]
+    ORCH --> O["🔮 Oracle<br/><i>GLM-5 (Z.AI)</i>"]
+    ORCH --> D["💭 Dreamer<br/><i>GPT-4o-mini</i>"]
+    W --> SUB["🧬 subconscious.json<br/><i>shared memory with decay/reinforcement</i>"]
+    L --> SUB
+    O --> SUB
+    D --> SUB
+    SUB -->|escalation| MAIN["🥃 Main Agent<br/><i>Claude Opus</i>"]
+
+    style CRON fill:#2d3436,stroke:#dfe6e9,color:#dfe6e9
+    style ORCH fill:#6c5ce7,stroke:#a29bfe,color:#fff
+    style W fill:#00b894,stroke:#55efc4,color:#fff
+    style L fill:#0984e3,stroke:#74b9ff,color:#fff
+    style O fill:#e17055,stroke:#fab1a0,color:#fff
+    style D fill:#fdcb6e,stroke:#ffeaa7,color:#2d3436
+    style SUB fill:#636e72,stroke:#b2bec3,color:#fff
+    style MAIN fill:#d63031,stroke:#ff7675,color:#fff
 ```
 
 Every 5 minutes, the orchestrator:
