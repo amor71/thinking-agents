@@ -80,6 +80,49 @@ def get_system_health():
     except Exception as e:
         return f"Health check failed: {e}"
 
+BRAVE_KEY = load_env("~/.config/brave/credentials.env").get("BRAVE_API_KEY", "")
+
+def get_news_headlines():
+    """Fetch a few news headlines for external stimulation. Rotates topics."""
+    if not BRAVE_KEY:
+        return "(no Brave API key — skipping news)"
+    
+    # Rotate topics based on tick count
+    topics = [
+        "top news today",
+        "AI technology news today",
+        "financial markets news",
+        "science breakthroughs this week",
+        "world news today",
+        "startup funding news",
+        "open source software news",
+        "interesting discoveries this week",
+    ]
+    
+    try:
+        tick = load_subconscious().get("tick_count", 0)
+        topic = topics[tick % len(topics)]
+        
+        params = urllib.parse.urlencode({"q": topic, "count": 5, "freshness": "pd"})
+        url = f"https://api.search.brave.com/res/v1/web/search?{params}"
+        req = urllib.request.Request(url, headers={
+            "Accept": "application/json",
+            "X-Subscription-Token": BRAVE_KEY,
+            "User-Agent": "thinking-agents/1.0",
+        })
+        resp = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(resp.read())
+        
+        results = []
+        for item in data.get("web", {}).get("results", [])[:5]:
+            title = item.get("title", "")
+            desc = item.get("description", "")[:150]
+            results.append(f"• {title}: {desc}")
+        
+        return f"[News — {topic}]\n" + "\n".join(results) if results else "(no news results)"
+    except Exception as e:
+        return f"(news fetch failed: {e})"
+
 def get_recent_memory():
     """Read today's and yesterday's memory files."""
     mem_dir = Path.home() / ".openclaw/workspace/memory"
@@ -344,7 +387,8 @@ def main():
     # Gather context
     health = get_system_health()
     memory = get_recent_memory()
-    context = f"System Health:\n{health}\n\nRecent Memory:\n{memory}"
+    news = get_news_headlines()
+    context = f"System Health:\n{health}\n\nRecent Memory:\n{memory}\n\nExternal World:\n{news}"
     
     # Build prompts
     prompts = {}
