@@ -15,12 +15,17 @@ import json
 import os
 import sys
 import time
+import signal
+import socket
 import subprocess
 import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+# Set a global default socket timeout as a safety net
+socket.setdefaulttimeout(120)
 
 # ─── Paths ────────────────────────────────────────────────────
 BASE = Path(__file__).parent
@@ -215,7 +220,7 @@ def call_gemini(key, model, prompt, max_tokens=500, timeout=30):
     result = json.loads(resp.read())
     return result["candidates"][0]["content"]["parts"][0]["text"]
 
-def call_glm(key, model, prompt, max_tokens=1000, timeout=60):
+def call_glm(key, model, prompt, max_tokens=1000, timeout=120):
     """Call Z.AI GLM API (reasoning model, needs more tokens)."""
     url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
     data = json.dumps({
@@ -234,9 +239,12 @@ def call_glm(key, model, prompt, max_tokens=1000, timeout=60):
         "User-Agent": "thinking-agents/1.0",
     })
     
-    resp = urllib.request.urlopen(req, timeout=timeout)
-    result = json.loads(resp.read())
-    return result["choices"][0]["message"]["content"]
+    try:
+        resp = urllib.request.urlopen(req, timeout=timeout)
+        result = json.loads(resp.read())
+        return result["choices"][0]["message"]["content"]
+    except (urllib.error.HTTPError, urllib.error.URLError, socket.timeout, TimeoutError, OSError) as e:
+        raise Exception(f"GLM API error: {e}")
 
 def run_thread(thread_name, config, prompt):
     """Run a single thinking thread on its assigned model."""
@@ -411,7 +419,7 @@ def main():
             executor.submit(run_thread, name, config, prompts[name]): name
             for name, config in THREADS.items()
         }
-        for future in as_completed(futures, timeout=90):
+        for future in as_completed(futures, timeout=150):
             name = futures[future]
             try:
                 results[name] = future.result()
