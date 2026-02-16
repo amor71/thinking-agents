@@ -462,13 +462,17 @@ def main():
     hour = now_est.hour
     is_night = hour >= 23 or hour < 8
     
+    tick = subconscious.get("tick_count", 0)
     active_threads = dict(THREADS)
     if is_night:
         # Night mode: dreamers > workers. Skip watcher & librarian every other tick.
-        tick = subconscious.get("tick_count", 0)
         if tick % 2 == 0:
             active_threads = {k: v for k, v in THREADS.items() if k in ("dreamer", "oracle")}
         # Oracle thinks deep at night too — good time for reflection
+    else:
+        # Daytime: run Watcher every 3rd tick to stay within Groq free tier (100K tokens/day)
+        if tick % 3 != 0 and "watcher" in active_threads:
+            del active_threads["watcher"]
     
     # Build prompts
     prompts = {}
@@ -526,34 +530,23 @@ def main():
     
     print(json.dumps(report, indent=2))
     
-    # If escalation, notify Rye via gateway webhook
+    # If escalation, write to file for Rye to pick up on heartbeat
     if escalations:
         msg = "🚨 Thinking Clock Escalation:\n" + "\n".join(
             f"• {e['thread']}: {e['reason']}" for e in escalations
         )
         print(f"\n{msg}")
+        escalation_file = SCRIPT_DIR / "escalations.jsonl"
         try:
-            gw_token = load_env("~/.openclaw/openclaw.json")  # won't work, need direct read
-        except:
-            pass
-        # Read gateway config directly
-        gw_config_path = Path.home() / ".openclaw" / "openclaw.json"
-        if gw_config_path.exists():
-            try:
-                gw = json.loads(gw_config_path.read_text())
-                port = gw.get("gateway", {}).get("port", 18789)
-                token = gw.get("gateway", {}).get("auth", {}).get("token", "")
-                data = json.dumps({"text": msg, "mode": "now"}).encode()
-                req = urllib.request.Request(
-                    f"http://127.0.0.1:{port}/hooks/wake",
-                    data=data,
-                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
-                    method="POST"
-                )
-                urllib.request.urlopen(req, timeout=10)
-                print("  → Notified Rye via gateway webhook")
-            except Exception as we:
-                print(f"  → Webhook failed: {we}")
+            with open(escalation_file, "a") as f:
+                f.write(json.dumps({
+                    "time": datetime.now().isoformat(),
+                    "escalations": escalations,
+                    "tick": tick
+                }) + "\n")
+            print("  → Written to escalations.jsonl")
+        except Exception as we:
+            print(f"  → Failed to write escalation: {we}")
 
 if __name__ == "__main__":
     main()
