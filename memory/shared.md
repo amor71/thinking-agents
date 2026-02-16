@@ -42,3 +42,7 @@ Agents Plane setup is COMPLETE. Startup script fixes are in progress, tracked se
 
 ### 2026-02-16 08:30 (librarian)
 Thinking clock: Focus hints need improvement. Dreamer is generating irrelevant 'decluttering' content despite Agents Plane focus. Agents Plane setup: COMPLETE. Startup script fixes still in progress. Verify GitHub PAT scopes for Agents Plane.
+
+### 2026-02-16 08:35 (oracle)
+### 2026-02-16 08:35 (oracle)
+**Thinking clock meta-issue:** System detects problems (Dreamer focus) but can't fix them — only escalate. Escalation loop = design gap. Need action mechanism, not just observation. **Tue 8AM:** Verify Chai crons re-enable. **GitHub PAT:** Verify scopes before Agents Plane goes live.

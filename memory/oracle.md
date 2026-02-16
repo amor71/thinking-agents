@@ -30,3 +30,17 @@ The focus_hint system isn't working — Dreamer keeps generating decluttering co
 - If Amichay asks about thinking clock performance, be ready with concrete assessment
 - GitHub PAT scope verification still open (strength 8 in subconscious)
 - Markets closed today (Presidents' Day) — Chai should be quiet
+
+### 2026-02-16 08:35
+### 2026-02-16 08:35
+## Meta-Observation: Thinking Clock Self-Limitation
+
+The Dreamer focus problem has been escalated 3 times in the last 10 minutes. This reveals a systemic gap: the thinking clock can *detect* misalignment but cannot *correct* it. Threads are observers, not actors.
+
+**Implication:** When Amichay asks about thinking clock performance, this is the key insight — we need a mechanism to turn observations into actions, not just escalations.
+
+## Tuesday Action Item
+Chai crons disabled for Presidents' Day. Re-enable scheduled for Tue 8AM. Verify this executes.
+
+## GitHub PAT: The Quiet Risk
+Strength 4-8 in subconscious for days. Low urgency but high potential impact if Agents Plane hits a scope gap during real work. Should verify before declaring Agents Plane fully operational.

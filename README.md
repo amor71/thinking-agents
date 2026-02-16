@@ -35,11 +35,13 @@ graph TD
 
 Every 5 minutes, the orchestrator:
 
-1. **Reads** the current subconscious state
-2. **Gathers** live context (system health, recent memory files)
-3. **Runs 4 threads in parallel** — each on a different AI model
-4. **Aggregates** results: decays old observations, reinforces recurring ones, adds new findings
-5. **Escalates** to the main agent if something urgent surfaces
+1. **Reads** the current subconscious state + each thread's persistent memory
+2. **Gathers** live context (system health, recent memory files, conversation context, shared memory)
+3. **Checks the clock** — night mode runs more dreamers, fewer workers
+4. **Runs threads in parallel** — each on a different AI model
+5. **Each thread writes to its own memory journal** — building continuity across ticks
+6. **Aggregates** results: decays old observations, reinforces recurring ones, adds new findings
+7. **Escalates** via webhook to the main agent if something urgent surfaces (max 1/hour)
 
 ~30 seconds per tick. Costs practically nothing.
 
@@ -80,9 +82,81 @@ This means:
 - Real patterns strengthen (mentioned repeatedly → persists)
 - The subconscious stays small and relevant
 
-### Escalation
+### Escalation via Webhook
 
-If any thread flags something as urgent (`escalate: true`), the orchestrator alerts the main agent with compiled context from all relevant findings.
+If any thread flags something as urgent (`escalate: true`), the orchestrator sends a `POST /hooks/wake` request to the OpenClaw gateway with the escalation details. This wakes the main agent immediately — no polling, no log checking.
+
+**Cooldown:** Max 1 escalation per hour to prevent spam. If threads keep escalating about the same issue, only the first one gets through.
+
+```
+orchestrator.py → escalation detected →
+POST http://127.0.0.1:{port}/hooks/wake
+  { "text": "🚨 Thinking Clock Escalation: ...", "mode": "now" }
+```
+
+The gateway port and auth token are read directly from `~/.openclaw/openclaw.json`.
+
+---
+
+## Memory & Continuity
+
+Each thread has **persistent memory** that survives across ticks. Without this, threads would repeat themselves endlessly (we learned this the hard way — the Dreamer once spent 200+ ticks on the same topic).
+
+### Per-Thread Memory (`memory/<thread>.md`)
+
+Each thread has its own journal file:
+- `memory/watcher.md`
+- `memory/librarian.md`
+- `memory/oracle.md`
+- `memory/dreamer.md`
+
+Every tick, the thread:
+1. **Reads** its full memory journal
+2. **Processes** the current context
+3. **Appends** a `memory_update` with what it learned, what it wants to track, and what to explore next
+
+This gives each thread **self-directed continuity**. The Dreamer reads what she already explored and moves on to something new. The Librarian tracks which threads are open vs resolved.
+
+Memory files auto-trim at 20KB (keeps the most recent 16KB).
+
+### Shared Memory (`memory/shared.md`)
+
+A cross-pollination space where all threads and the main agent (Rye) can read and write:
+
+```markdown
+### 2026-02-16 07:55 (Rye)
+Active projects: Agents Plane, Thinking Clock, Hush
+Peter Steinberger thread: CLOSED. Do not flag.
+
+### 2026-02-16 08:10 (librarian)
+Noticed agents-plane startup script was updated 3 times today...
+
+### 2026-02-16 08:10 (dreamer)
+What if the thinking clock could adjust its own thread count based on time of day?
+```
+
+Threads include a `shared_memory_update` field in their JSON output to post to this space. The main agent updates it with conversation context so threads know what's actually happening.
+
+### Conversation Context (`recent-context.md`)
+
+The main agent maintains a curated context file that all threads can read. This prevents threads from flagging resolved issues — they can see what's been discussed and closed.
+
+---
+
+## Night Mode
+
+The orchestrator adjusts its behavior based on time of day (11 PM – 8 AM EST):
+
+| | Day Mode | Night Mode |
+|---|---|---|
+| **Watcher** | Every tick | Every other tick |
+| **Librarian** | Every tick | Every other tick |
+| **Oracle** | Every tick | Every tick |
+| **Dreamer** | Every tick | Every tick |
+
+**Philosophy:** At night, there's less to scan and track, but it's a great time for deep thinking and creative connections. The Oracle reasons about consequences, the Dreamer makes unexpected connections — both benefit from uninterrupted runtime.
+
+If a specific work task needs overnight monitoring, the main agent can set a focus hint in `recent-context.md` and all threads will see it.
 
 ---
 
@@ -169,12 +243,33 @@ Supported providers: `groq`, `openai`, `gemini`, `glm` (any OpenAI-compatible AP
 
 ### Customize Thread Prompts
 
-Edit the markdown files in `prompts/`:
-- `watcher.md` — what to scan for
-- `librarian.md` — what patterns to look for
-- `oracle.md` — how far ahead to look
-- `dreamer.md` — how creative to be
-- `aggregator.md` — how to merge results (decay rates, limits, etc.)
+Edit the markdown files in `prompts/`. Prompts are intentionally minimal — threads largely direct themselves via their memory journals:
+- `watcher.md` — environment scanner
+- `librarian.md` — pattern tracker
+- `oracle.md` — deep reasoner
+- `dreamer.md` — creative connector
+
+### File Structure
+
+```
+thinking-agents/
+├── orchestrator.py          # Main orchestrator — runs all threads
+├── subconscious.json        # Shared state (auto-managed)
+├── recent-context.md        # Curated by main agent for thread awareness
+├── prompts/
+│   ├── watcher.md           # Thread prompt templates
+│   ├── librarian.md
+│   ├── oracle.md
+│   └── dreamer.md
+├── memory/
+│   ├── watcher.md           # Per-thread persistent journals
+│   ├── librarian.md
+│   ├── oracle.md
+│   ├── dreamer.md
+│   └── shared.md            # Cross-pollination space (all threads + main agent)
+├── MANIFESTO.md             # Philosophy and design principles
+└── README.md
+```
 
 ### Add a New Thread
 
