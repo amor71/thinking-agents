@@ -179,15 +179,39 @@ def append_thread_memory(thread_name, update):
         content = mem_file.read_text()
         mem_file.write_text(content[-16000:])
 
+def get_shared_memory():
+    """Read the shared cross-pollination memory."""
+    shared_file = BASE / "memory" / "shared.md"
+    if shared_file.exists():
+        return shared_file.read_text()[-3000:]
+    return "(no shared memory yet)"
+
+def append_shared_memory(thread_name, update):
+    """Append to the shared cross-pollination memory."""
+    if not update:
+        return
+    shared_file = BASE / "memory" / "shared.md"
+    now = datetime.now(timezone(timedelta(hours=-5))).strftime("%Y-%m-%d %H:%M")
+    with open(shared_file, "a") as f:
+        f.write(f"\n### {now} ({thread_name})\n{update.strip()}\n")
+    if shared_file.stat().st_size > 20000:
+        content = shared_file.read_text()
+        shared_file.write_text(content[-16000:])
+
 def build_prompt(thread_name, prompt_template, subconscious, context):
     """Build the full prompt for a thread."""
     sub_json = json.dumps(subconscious, indent=2)
     thread_memory = get_thread_memory(thread_name)
+    shared_memory = get_shared_memory()
     
     prompt = prompt_template
     prompt = prompt.replace("{{SUBCONSCIOUS}}", sub_json)
     prompt = prompt.replace("{{THREAD_MEMORY}}", thread_memory)
     prompt = prompt.replace("{{CONTEXT}}", context)
+    
+    # Append shared memory for cross-pollination
+    prompt += f"\n\n## Shared Memory (all threads + Rye can read/write)\n```\n{shared_memory}\n```"
+    prompt += "\n\nIf you have something other threads should see, include a `shared_memory_update` field in your JSON output."
     
     return prompt
 
@@ -417,18 +441,31 @@ def main():
     recent_ctx = get_recent_context()
     context = f"System Health:\n{health}\n\nRecent Memory:\n{memory}\n\nRecent Conversation Context (from Rye):\n{recent_ctx}\n\nExternal World:\n{news}"
     
+    # Determine which threads to run based on time of day
+    now_est = datetime.now(timezone(timedelta(hours=-5)))
+    hour = now_est.hour
+    is_night = hour >= 23 or hour < 8
+    
+    active_threads = dict(THREADS)
+    if is_night:
+        # Night mode: dreamers > workers. Skip watcher & librarian every other tick.
+        tick = subconscious.get("tick_count", 0)
+        if tick % 2 == 0:
+            active_threads = {k: v for k, v in THREADS.items() if k in ("dreamer", "oracle")}
+        # Oracle thinks deep at night too — good time for reflection
+    
     # Build prompts
     prompts = {}
-    for name, config in THREADS.items():
+    for name, config in active_threads.items():
         template = config["prompt_file"].read_text()
         prompts[name] = build_prompt(name, template, subconscious, context)
     
-    # Run all 4 threads in parallel
+    # Run threads in parallel
     results = {}
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
             executor.submit(run_thread, name, config, prompts[name]): name
-            for name, config in THREADS.items()
+            for name, config in active_threads.items()
         }
         for future in as_completed(futures, timeout=150):
             name = futures[future]
@@ -445,6 +482,9 @@ def main():
         mem_update = result.get("memory_update")
         if mem_update:
             append_thread_memory(name, mem_update)
+        shared_update = result.get("shared_memory_update")
+        if shared_update:
+            append_shared_memory(name, shared_update)
     
     # Write
     SUBCONSCIOUS.write_text(json.dumps(updated, indent=2))
