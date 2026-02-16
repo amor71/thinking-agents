@@ -420,10 +420,26 @@ def aggregate(subconscious, thread_results):
     subconscious["last_tick"] = now
     subconscious["tick_count"] = subconscious.get("tick_count", 0) + 1
     
-    # Handle escalations
+    # Handle escalations with cooldown (max 1 per hour)
     if escalations:
-        subconscious.setdefault("escalation_history", []).extend(escalations)
-        subconscious["escalation_history"] = subconscious["escalation_history"][-10:]
+        last_escalation = subconscious.get("last_escalation_time", "")
+        now_dt = datetime.now(timezone(timedelta(hours=-5)))
+        cooldown_ok = True
+        if last_escalation:
+            try:
+                last_dt = datetime.fromisoformat(last_escalation)
+                if (now_dt - last_dt).total_seconds() < 3600:  # 1 hour cooldown
+                    cooldown_ok = False
+            except (ValueError, TypeError):
+                pass
+        
+        if cooldown_ok:
+            subconscious.setdefault("escalation_history", []).extend(escalations)
+            subconscious["escalation_history"] = subconscious["escalation_history"][-10:]
+            subconscious["last_escalation_time"] = now
+        else:
+            # Suppress — too soon since last escalation
+            escalations = []
     
     return subconscious, escalations
 
