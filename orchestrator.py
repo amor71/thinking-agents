@@ -526,12 +526,34 @@ def main():
     
     print(json.dumps(report, indent=2))
     
-    # If escalation, exit with code 1 so cron can detect
+    # If escalation, notify Rye via gateway webhook
     if escalations:
-        print(f"\n🚨 ESCALATION from: {', '.join(e['thread'] for e in escalations)}")
-        for e in escalations:
-            print(f"  → {e['reason']}")
-        sys.exit(1)
+        msg = "🚨 Thinking Clock Escalation:\n" + "\n".join(
+            f"• {e['thread']}: {e['reason']}" for e in escalations
+        )
+        print(f"\n{msg}")
+        try:
+            gw_token = load_env("~/.openclaw/openclaw.json")  # won't work, need direct read
+        except:
+            pass
+        # Read gateway config directly
+        gw_config_path = Path.home() / ".openclaw" / "openclaw.json"
+        if gw_config_path.exists():
+            try:
+                gw = json.loads(gw_config_path.read_text())
+                port = gw.get("gateway", {}).get("port", 18789)
+                token = gw.get("gateway", {}).get("auth", {}).get("token", "")
+                data = json.dumps({"text": msg, "mode": "now"}).encode()
+                req = urllib.request.Request(
+                    f"http://127.0.0.1:{port}/hooks/wake",
+                    data=data,
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+                    method="POST"
+                )
+                urllib.request.urlopen(req, timeout=10)
+                print("  → Notified Rye via gateway webhook")
+            except Exception as we:
+                print(f"  → Webhook failed: {we}")
 
 if __name__ == "__main__":
     main()
