@@ -138,6 +138,13 @@ def get_recent_memory():
             result += f"\n--- {day} ---\n{content}\n"
     return result or "(no recent memory files)"
 
+def get_recent_context():
+    """Read Rye's curated context file for conversation awareness."""
+    ctx_file = BASE / "recent-context.md"
+    if ctx_file.exists():
+        return ctx_file.read_text()[:3000]
+    return "(no recent context)"
+
 def load_subconscious():
     """Load current subconscious state."""
     if SUBCONSCIOUS.exists():
@@ -388,7 +395,8 @@ def main():
     health = get_system_health()
     memory = get_recent_memory()
     news = get_news_headlines()
-    context = f"System Health:\n{health}\n\nRecent Memory:\n{memory}\n\nExternal World:\n{news}"
+    recent_ctx = get_recent_context()
+    context = f"System Health:\n{health}\n\nRecent Memory:\n{memory}\n\nRecent Conversation Context (from Rye):\n{recent_ctx}\n\nExternal World:\n{news}"
     
     # Build prompts
     prompts = {}
