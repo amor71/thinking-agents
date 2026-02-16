@@ -159,24 +159,35 @@ def load_subconscious():
             return {"version": 1, "tick_count": 0, "active_threads": [], "patterns": [], "hunches": []}
     return {"version": 1, "tick_count": 0, "active_threads": [], "patterns": [], "hunches": []}
 
+def get_thread_memory(thread_name):
+    """Read a thread's persistent memory file."""
+    mem_file = BASE / "memory" / f"{thread_name}.md"
+    if mem_file.exists():
+        return mem_file.read_text()[-4000:]  # Last 4000 chars to keep context window manageable
+    return "(no memory yet)"
+
+def append_thread_memory(thread_name, update):
+    """Append to a thread's persistent memory file."""
+    if not update:
+        return
+    mem_file = BASE / "memory" / f"{thread_name}.md"
+    now = datetime.now(timezone(timedelta(hours=-5))).strftime("%Y-%m-%d %H:%M")
+    with open(mem_file, "a") as f:
+        f.write(f"\n### {now}\n{update.strip()}\n")
+    # Trim if over 20KB (keep last 16KB)
+    if mem_file.stat().st_size > 20000:
+        content = mem_file.read_text()
+        mem_file.write_text(content[-16000:])
+
 def build_prompt(thread_name, prompt_template, subconscious, context):
     """Build the full prompt for a thread."""
     sub_json = json.dumps(subconscious, indent=2)
-    
-    # Get thread state
-    thread_state = subconscious.get("thread_state", {}).get(thread_name, {})
-    history = json.dumps(thread_state.get("last_findings", []), indent=2)
-    focus = thread_state.get("focus_hint", "None")
-    novelty = thread_state.get("novelty_pressure", 0)
+    thread_memory = get_thread_memory(thread_name)
     
     prompt = prompt_template
     prompt = prompt.replace("{{SUBCONSCIOUS}}", sub_json)
-    prompt = prompt.replace("{{THREAD_HISTORY}}", history)
-    prompt = prompt.replace("{{FOCUS_HINT}}", str(focus))
-    prompt = prompt.replace("{{NOVELTY_PRESSURE}}", str(novelty))
-    
-    # Add live context
-    prompt += f"\n\n## Live Context\n```\n{context}\n```"
+    prompt = prompt.replace("{{THREAD_MEMORY}}", thread_memory)
+    prompt = prompt.replace("{{CONTEXT}}", context)
     
     return prompt
 
@@ -428,6 +439,12 @@ def main():
     
     # Aggregate
     updated, escalations = aggregate(subconscious, results)
+    
+    # Write thread memory updates
+    for name, result in results.items():
+        mem_update = result.get("memory_update")
+        if mem_update:
+            append_thread_memory(name, mem_update)
     
     # Write
     SUBCONSCIOUS.write_text(json.dumps(updated, indent=2))
