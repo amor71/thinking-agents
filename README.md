@@ -135,22 +135,16 @@ Output:
 }
 ```
 
-### Run on a Schedule (OpenClaw)
+### Run on a Schedule
 
-If you're running [OpenClaw](https://github.com/openclaw/openclaw):
+Use system crontab — no need to spawn an LLM session just to run a Python script:
 
-```bash
-# Add as a cron job (every 5 minutes)
-openclaw cron add --name "thinking-clock" \
-  --every 5m \
-  --command "cd /path/to/thinking-agents && python3 orchestrator.py"
-```
-
-Or use any cron scheduler:
 ```bash
 # crontab -e
-*/5 * * * * cd /path/to/thinking-agents && python3 orchestrator.py >> /var/log/thinking-agents.log 2>&1
+*/5 * * * * cd /path/to/thinking-agents && python3 orchestrator.py >> /tmp/thinking-clock.log 2>&1
 ```
+
+> **Note:** Don't use OpenClaw's `agentTurn` cron for this. The orchestrator calls the 4 models directly via their APIs — wrapping it in another LLM session is wasteful.
 
 ---
 
@@ -210,7 +204,7 @@ With the default configuration:
 | Dreamer | GPT-4o-mini | ~$0.001 | ~$0.29 |
 | **Total** | | | **~$0.58/day** |
 
-The cron runner itself (GPT-4o-mini on OpenClaw) adds ~$0.15/day.
+The orchestrator runs directly via system crontab — no LLM wrapper needed.
 
 **Total: under $1/day for continuous AI cognition.**
 
