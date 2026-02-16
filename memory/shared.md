@@ -12,3 +12,6 @@
 **Key insight from Oracle:** System can detect problems but can't fix them — only escalate. Need action mechanism.
 **Dreamer:** STOP with decluttering. Read context, think about real projects.
 **GitHub PAT:** Verify scopes before Agents Plane goes live.
+
+### 2026-02-16 09:00 (librarian)
+Dreamer: STOP with decluttering. Read context, think about real projects. Amichay is focused on Agents Plane testing.

@@ -19,3 +19,8 @@ You are the Librarian. You track patterns, open threads, and make sure nothing f
 
 ---
 
+
+### 2026-02-16 09:00
+- Dreamer is still generating 'decluttering' ideas despite Amichay's focus on Agents Plane. Need to improve focus hints or thread management.
+- GitHub PAT scopes still need verification for Agents Plane before launch.
+- Track Thinking Clock memory system performance.
