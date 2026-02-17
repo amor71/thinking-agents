@@ -167,13 +167,31 @@ def get_thread_memory(thread_name):
     return "(no memory yet)"
 
 def append_thread_memory(thread_name, update):
-    """Append to a thread's persistent memory file."""
+    """Append to a thread's persistent memory file, with dedup."""
     if not update:
         return
+    update_stripped = update.strip()
+    if not update_stripped:
+        return
     mem_file = BASE / "memory" / f"{thread_name}.md"
+    # Dedup: skip if last entry is >80% similar (simple check)
+    if mem_file.exists():
+        existing = mem_file.read_text()
+        # Get last entry (after last ###)
+        parts = existing.split("\n### ")
+        if len(parts) > 1:
+            last_entry = parts[-1].split("\n", 1)[-1].strip() if "\n" in parts[-1] else ""
+            if last_entry and len(last_entry) > 20:
+                # Simple similarity: check if >80% of words overlap
+                last_words = set(last_entry.lower().split())
+                new_words = set(update_stripped.lower().split())
+                if last_words and new_words:
+                    overlap = len(last_words & new_words) / max(len(last_words), len(new_words))
+                    if overlap > 0.8:
+                        return  # Skip duplicate
     now = datetime.now(timezone(timedelta(hours=-5))).strftime("%Y-%m-%d %H:%M")
     with open(mem_file, "a") as f:
-        f.write(f"\n### {now}\n{update.strip()}\n")
+        f.write(f"\n### {now}\n{update_stripped}\n")
     # Trim if over 20KB (keep last 16KB)
     if mem_file.stat().st_size > 20000:
         content = mem_file.read_text()
