@@ -1,68 +1,76 @@
 {
   "version": 1,
-  "last_tick": "2026-02-16T10:55:47.324632-05:00",
-  "tick_count": 252,
+  "last_tick": "2026-02-16T19:25:15.455765-05:00",
+  "tick_count": 354,
   "active_threads": [
     {
-      "id": "li-stale_th-4640",
-      "summary": "GitHub PAT scopes for Agents Plane need verification before testing. This is a blocking issue for Ag",
+      "id": "li-stale_th-1634",
+      "summary": "Agents Plane WhatsApp QR onboarding flow is being tested, but there's no update on the outcome. Trac",
       "strength": 10,
-      "added": "2026-02-16T10:10:40.552898-05:00",
-      "last_seen": "2026-02-16T10:55:47.324632-05:00",
-      "source": "librarian"
-    },
-    {
-      "id": "li-forgotte-5240",
-      "summary": "Verify Chai cron is SCHEDULED to re-enable Tuesday at 8AM, not just remembered in memory. This needs",
-      "strength": 10,
-      "added": "2026-02-16T10:20:40.614242-05:00",
-      "last_seen": "2026-02-16T10:55:47.324632-05:00",
+      "added": "2026-02-16T17:40:34.130403-05:00",
+      "last_seen": "2026-02-16T19:25:15.455765-05:00",
       "source": "librarian"
     }
   ],
   "patterns": [
     {
-      "id": "li-pattern-1343",
-      "summary": "Dreamer consistently ignores focus hints, especially the 'STOP decluttering' directive. This suggest",
-      "strength": 10,
-      "added": "2026-02-16T09:15:43.235293-05:00",
-      "last_seen": "2026-02-16T10:55:47.324632-05:00",
+      "id": "li-pattern-1934",
+      "summary": "Librarian is in a persistent failure state, ignoring the 'Resolved Items' section of shared memory a",
+      "strength": 9,
+      "added": "2026-02-16T17:45:34.398961-05:00",
+      "last_seen": "2026-02-16T19:25:15.455765-05:00",
+      "source": "librarian"
+    },
+    {
+      "id": "li-pattern-7022",
+      "summary": "Librarian thread is in a persistent failure state, ignoring the 'Resolved Items' section and polluti",
+      "strength": 2,
+      "added": "2026-02-16T19:10:22.654771-05:00",
+      "last_seen": "2026-02-16T19:20:20.123301-05:00",
       "source": "librarian"
     }
   ],
   "hunches": [
     {
-      "id": "dr-connecti-7046",
-      "summary": "Linking the verification of GitHub PAT scopes with the urgency of testing the Agents Plane may revea",
-      "strength": 2,
-      "added": "2026-02-16T10:50:46.077418-05:00",
-      "last_seen": "2026-02-16T10:50:46.077418-05:00",
-      "source": "dreamer"
+      "id": "li-connecti-6718",
+      "summary": "Dreamer's insights suggest exploring emotional intelligence concepts to address the Librarian's atte",
+      "strength": 3,
+      "added": "2026-02-16T19:05:18.728675-05:00",
+      "last_seen": "2026-02-16T19:15:14.280828-05:00",
+      "source": "librarian"
+    },
+    {
+      "id": "li-connecti-7620",
+      "summary": "Dreamer's insights on emotional intelligence and thread governance should be explored once the atten",
+      "strength": 4,
+      "added": "2026-02-16T19:20:20.123301-05:00",
+      "last_seen": "2026-02-16T19:25:15.455765-05:00",
+      "source": "librarian"
     }
   ],
   "insights": [
     {
-      "id": "dr-challeng-7046",
-      "summary": "Question the reliance on technical solutions in the Agents Plane and advocate for a more balanced ap",
-      "strength": 4,
-      "added": "2026-02-16T10:50:46.077418-05:00",
-      "last_seen": "2026-02-16T10:55:47.324632-05:00",
+      "id": "dr-challeng-2232",
+      "summary": "Challenge the assumption that emotional feedback is only relevant during onboarding; it could be piv",
+      "strength": 10,
+      "added": "2026-02-16T17:50:32.574042-05:00",
+      "last_seen": "2026-02-16T19:25:15.455765-05:00",
       "source": "dreamer"
     },
     {
-      "id": "dr-idea-6741",
-      "summary": "Consider developing a feature that allows users to visualize their emotional journeys alongside the ",
-      "strength": 3,
-      "added": "2026-02-16T10:45:41.005376-05:00",
-      "last_seen": "2026-02-16T10:55:47.324632-05:00",
+      "id": "dr-connecti-4022",
+      "summary": "The persistent failure of the Librarian's deduplication logic may be linked to emotional feedback me",
+      "strength": 6,
+      "added": "2026-02-16T18:20:22.805081-05:00",
+      "last_seen": "2026-02-16T19:20:20.123301-05:00",
       "source": "dreamer"
     },
     {
-      "id": "dr-connecti-7347",
-      "summary": "Link the verification of GitHub PAT scopes to the urgency of testing the Agents Plane, emphasizing t",
+      "id": "dr-connecti-7915",
+      "summary": "Exploring the intersection of emotional feedback mechanisms and the Librarian's governance failures ",
       "strength": 3,
-      "added": "2026-02-16T10:55:47.324632-05:00",
-      "last_seen": "2026-02-16T10:55:47.324632-05:00",
+      "added": "2026-02-16T19:25:15.455765-05:00",
+      "last_seen": "2026-02-16T19:25:15.455765-05:00",
       "source": "dreamer"
     }
   ],
@@ -91,42 +99,62 @@
       "thread": "dreamer",
       "reason": "The focus on technical issues and GitHub PAT verification is overshadowing potential creative developments in user engagement.",
       "timestamp": "2026-02-16T10:50:46.077418-05:00"
+    },
+    {
+      "thread": "dreamer",
+      "reason": "The need for GitHub PAT scope verification is critical before Agents Plane testing can proceed.",
+      "timestamp": "2026-02-16T14:55:33.953368-05:00"
+    },
+    {
+      "thread": "dreamer",
+      "reason": "The ongoing issue with GitHub PAT scopes is blocking essential testing and development efforts for the Agents Plane.",
+      "timestamp": "2026-02-16T16:20:37.713895-05:00"
+    },
+    {
+      "thread": "librarian",
+      "reason": "Librarian thread is in a persistent failure state, ignoring the 'Resolved Items' section and polluting shared memory with repetitive, incorrect information.",
+      "timestamp": "2026-02-16T17:40:34.130403-05:00"
+    },
+    {
+      "thread": "librarian",
+      "reason": "Librarian thread is in a persistent failure state, ignoring the 'Resolved Items' section and polluting shared memory with repetitive, incorrect information. Requires immediate human intervention to reset attention mechanism.",
+      "timestamp": "2026-02-16T18:45:17.570088-05:00"
     }
   ],
   "thread_state": {
     "watcher": {
       "last_findings": [],
-      "novelty_pressure": 5,
-      "last_tick": "2026-02-16T10:55:47.324632-05:00",
+      "novelty_pressure": 4,
+      "last_tick": "2026-02-16T19:15:14.280828-05:00",
       "model": "llama-3.3-70b-versatile",
       "provider": "groq"
     },
     "librarian": {
       "last_findings": [
-        "GitHub PAT scopes for Agents Plane need verification before testing. This is a b",
-        "Dreamer consistently ignores focus hints, including 'STOP' directives. This sugg",
-        "Verify Chai cron is SCHEDULED to re-enable Tuesday at 8AM, not just remembered i"
+        "Librarian is in a persistent failure state, ignoring the 'Resolved Items' sectio",
+        "Agents Plane WhatsApp QR onboarding test progress needs tracking. No update rece",
+        "Dreamer's insights on emotional intelligence and thread governance are potential"
       ],
       "novelty_pressure": 0,
-      "last_tick": "2026-02-16T10:55:47.324632-05:00",
+      "last_tick": "2026-02-16T19:25:15.455765-05:00",
       "model": "gemini-2.0-flash",
       "provider": "gemini"
     },
     "oracle": {
       "last_findings": [],
-      "novelty_pressure": 8,
-      "last_tick": "2026-02-16T10:55:47.324632-05:00",
+      "novelty_pressure": 6,
+      "last_tick": "2026-02-16T19:25:15.455765-05:00",
       "model": "glm-5",
       "provider": "glm"
     },
     "dreamer": {
       "last_findings": [
-        "Consider developing a feature that allows users to share their emotional journey",
-        "Link the verification of GitHub PAT scopes to the urgency of testing the Agents ",
-        "Question the reliance on technical solutions within the Agents Plane, advocating"
+        "Exploring the intersection of emotional feedback mechanisms and the Librarian's ",
+        "Develop a training protocol for threads to recognize and utilize the 'Resolved I",
+        "Challenge the assumption that emotional intelligence can only enhance user inter"
       ],
       "novelty_pressure": 0,
-      "last_tick": "2026-02-16T10:55:47.324632-05:00",
+      "last_tick": "2026-02-16T19:25:15.455765-05:00",
       "model": "gpt-4o-mini",
       "provider": "openai"
     }
@@ -137,5 +165,5 @@
       "added": "2026-02-15T20:33:00-05:00"
     }
   },
-  "last_escalation_time": "2026-02-16T10:50:46.077418-05:00"
+  "last_escalation_time": "2026-02-16T18:45:17.570088-05:00"
 }
