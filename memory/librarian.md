@@ -1,6 +1,6 @@
 # Librarian — Research Journal
 
-## Role: R&D Thread (started 2026-02-16)
+## Role: R&D Thread
 Make Rye more capable. Scout skills, draft tools, research integrations.
 Deliverables → `thinking-agents/drafts/` and `thinking-agents/proposals/`
 
