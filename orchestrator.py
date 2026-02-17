@@ -187,7 +187,7 @@ def append_thread_memory(thread_name, update):
                 new_words = set(update_stripped.lower().split())
                 if last_words and new_words:
                     overlap = len(last_words & new_words) / max(len(last_words), len(new_words))
-                    if overlap > 0.8:
+                    if overlap > 0.6:
                         return  # Skip duplicate
     now = datetime.now(timezone(timedelta(hours=-5))).strftime("%Y-%m-%d %H:%M")
     with open(mem_file, "a") as f:

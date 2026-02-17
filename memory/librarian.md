@@ -1,14 +1,11 @@
 # Librarian — Research Journal
 
-## 2026-02-16 — Fresh Start
-Role: R&D thread. Mission: make Rye more capable.
+## Role: R&D Thread (started 2026-02-16)
+Make Rye more capable. Scout skills, draft tools, research integrations.
 Deliverables → `thinking-agents/drafts/` and `thinking-agents/proposals/`
 
-### Current Setup
-- Debian 12 GCP VM, Node 22, Python 3, headless Chromium
-- OpenClaw 2026.2.13, WhatsApp channel
-- Skills: github, himalaya (email), weather, healthcheck
-- Sub-agents: Chai (GPT-4o), Nori (Gemini, inactive)
+### Rye's Setup
+Debian 12 GCP, Node 22, Python 3, headless Chromium, OpenClaw 2026.2.13
+Skills: github, himalaya, weather, healthcheck | Channel: WhatsApp
 
-### Next Tick
-Scout clawhub.com for useful skills Rye doesn't have yet.
+### Next: Scout clawhub.com for new skills
